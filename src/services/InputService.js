@@ -46,16 +46,16 @@ class InputService {
     );
   }
 
-  async askToAddPromotionQuantity() {
+  async askToAddPromotionQuantity(productName) {
     return this.#readInputUntilValid(
-      InputView.readAddQuantityDecision,
+      () => InputView.readAddQuantityDecision(productName),
       validateAnswer
     );
   }
 
-  async askToPayNonPromotionItem() {
+  async askToPayNonPromotionItem(nonPromotionProductInfo) {
     return this.#readInputUntilValid(
-      InputView.readPayNonPromotionItem,
+      () => InputView.readPayNonPromotionItem(nonPromotionProductInfo),
       validateAnswer
     );
   }
