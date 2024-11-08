@@ -3,6 +3,7 @@ import {
   formatQuantity,
   formatPromotion,
   formatPurchaseInfo,
+  formatDate,
 } from '../src/utils/formatting.js';
 import CONVENIENCE_STORE_CONSTANTS from '../src/constants/convenienceStoreConstants.js';
 
@@ -35,11 +36,16 @@ describe('formatting 테스트', () => {
   test.each([
     ['[사이다-2],[감자칩-1]', { 사이다: 2, 감자칩: 1 }],
     ['[사이다-10]', { 사이다: 10 }],
-    ['[사이다-10],[감자칩-1],[오렌지-3]', { 사이다 : 10, 감자칩: 1, 오렌지 : 3 }],
-  ])(
-    'formatPurchaseInfo 함수 테스트',
-    (inputPurchaseInfo, expectedResult) => {
-      expect(formatPurchaseInfo(inputPurchaseInfo)).toEqual(expectedResult);
-    }
-  );
+    ['[사이다-10],[감자칩-1],[오렌지-3]', { 사이다: 10, 감자칩: 1, 오렌지: 3 }],
+  ])('formatPurchaseInfo 함수 테스트', (inputPurchaseInfo, expectedResult) => {
+    expect(formatPurchaseInfo(inputPurchaseInfo)).toEqual(expectedResult);
+  });
+
+  test.each([
+    [new Date('2024-11-08T00:00:00Z'), '2024-11-08'],
+    [new Date('2023-01-01T00:00:00Z'), '2023-01-01'],
+    [new Date('2022-07-15T00:00:00Z'), '2022-07-15'],
+  ])('formatDate 함수 테스트', (inputDate, expectedResult) => {
+    expect(formatDate(inputDate)).toBe(expectedResult);
+  });
 });
