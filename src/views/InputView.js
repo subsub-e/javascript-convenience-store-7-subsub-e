@@ -8,16 +8,13 @@ class InputView {
 
   static async readAddQuantityDecision(promotionGoodsName) {
     return Console.readLineAsync(
-      `${INPUT_MESSAGES.NOW} ${promotionGoodsName} ${INPUT_MESSAGES.ADD_PROMOTION_QUANTITY}`
+      `${INPUT_MESSAGES.NOW} ${promotionGoodsName}${INPUT_MESSAGES.ADD_PROMOTION_QUANTITY}`
     );
   }
 
-  static async readPayNonPromotionItem(
-    promotionGoodsName,
-    promotionGoodsAmount
-  ) {
+  static async readPayNonPromotionItem(nonPromotionProductInfo) {
     return Console.readLineAsync(
-      `${INPUT_MESSAGES.NOW} ${promotionGoodsName} ${promotionGoodsAmount} ${INPUT_MESSAGES.PAY_NONPROMOTION_ITEM}`
+      `${INPUT_MESSAGES.NOW} ${nonPromotionProductInfo.name} ${nonPromotionProductInfo.quantity} ${INPUT_MESSAGES.PAY_NONPROMOTION_ITEM}`
     );
   }
 
