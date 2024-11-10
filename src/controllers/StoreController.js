@@ -1,6 +1,7 @@
 import Receipt from '../models/Receipt.js';
 import PaymentService from '../services/PaymentService.js';
 import OutputView from '../views/OutputView.js';
+import CONVENIENCE_STORE_CONSTANTS from '../constants/convenienceStoreConstants.js';
 
 class StoreController {
   constructor(inputService) {
@@ -25,14 +26,14 @@ class StoreController {
 
   async #checkMembership(receipt) {
     const answer = await this.inputService.askForMembershipDiscount();
-    if (answer == 'N') {
+    if (answer === CONVENIENCE_STORE_CONSTANTS.ANSWER_NO) {
       receipt.noMembershipDiscount();
     }
   }
 
   async #handleMorePurchase(stock) {
     const morePurchaseAnswer = await this.inputService.askForMorePurchase();
-    if (morePurchaseAnswer === 'Y') {
+    if (morePurchaseAnswer === CONVENIENCE_STORE_CONSTANTS.ANSWER_YES) {
       OutputView.printNewLine();
       await this.start(stock);
     }
