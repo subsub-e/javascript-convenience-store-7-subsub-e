@@ -29,19 +29,21 @@ class Receipt {
     totalPromotionDiscountPrice,
     totalPrice
   ) {
-    this.#promotionList.push({
-      name: promotionAppliedProductName,
-      quantity: promotionAppliedCount,
-    });
-    this.#totalPromotionPrice += totalPromotionDiscountPrice;
-    this.#membershipDiscount -= totalPrice;
+    if (promotionAppliedCount > 0) {
+      this.#promotionList.push({
+        name: promotionAppliedProductName,
+        quantity: promotionAppliedCount,
+      });
+      this.#totalPromotionPrice += totalPromotionDiscountPrice;
+      this.#membershipDiscount -= totalPrice;
+    }
   }
 
   getReceipt() {
     return {
       purchaseList: this.#purchaseList,
       promotionList: this.#promotionList,
-      totalPurchaseAmount : this.#calculateTotalAmount(),
+      totalPurchaseAmount: this.#calculateTotalAmount(),
       totalPurchasePrice: this.#totalPurchasePrice,
       totalPromotionPrice: this.#totalPromotionPrice,
       membershipDiscount: this.#calculateMembershipDiscount(
@@ -58,7 +60,6 @@ class Receipt {
   #calculateTotalAmount() {
     return this.#purchaseList.reduce((total, item) => total + item.quantity, 0);
   }
-  
 
   #calculateMembershipDiscount(membershipDiscount) {
     const calculatedDiscount = membershipDiscount * 0.3;
