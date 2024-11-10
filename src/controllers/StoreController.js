@@ -9,24 +9,33 @@ class StoreController {
 
   async start(stock) {
     const receipt = new Receipt();
-    this.#init(stock);
-
-    const purchaseInfo = await this.inputService.getPurchaseInfo(stock);
-
     const paymentService = new PaymentService(this.inputService);
+    this.#init(stock);
+    const purchaseInfo = await this.inputService.getPurchaseInfo(stock);
     await paymentService.start(purchaseInfo, stock, receipt);
-
-    const morePurchaseAnswer = await this.inputService.askForMorePurchase();
-
-    if (morePurchaseAnswer === 'Y') {
-      OutputView.printNewLine();
-      await this.start(stock);
-    }
+    await this.#checkMembership(receipt);
+    OutputView.showReceipt(receipt);
+    await this.#handleMorePurchase(stock);
   }
 
   #init(stock) {
     OutputView.showWelcomeMessage();
     OutputView.showProductStockInfo(stock.getProductInfo());
+  }
+
+  async #checkMembership(receipt) {
+    const answer = await this.inputService.askForMembershipDiscount();
+    if (answer == 'N') {
+      receipt.noMembershipDiscount();
+    }
+  }
+
+  async #handleMorePurchase(stock) {
+    const morePurchaseAnswer = await this.inputService.askForMorePurchase();
+    if (morePurchaseAnswer === 'Y') {
+      OutputView.printNewLine();
+      await this.start(stock);
+    }
   }
 }
 
