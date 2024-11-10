@@ -41,6 +41,7 @@ class Receipt {
     return {
       purchaseList: this.#purchaseList,
       promotionList: this.#promotionList,
+      totalPurchaseAmount : this.#calculateTotalAmount(),
       totalPurchasePrice: this.#totalPurchasePrice,
       totalPromotionPrice: this.#totalPromotionPrice,
       membershipDiscount: this.#calculateMembershipDiscount(
@@ -49,6 +50,15 @@ class Receipt {
       totalReturn: this.#calculateTotalReturn(),
     };
   }
+
+  noMembershipDiscount() {
+    this.#membershipDiscount = 0;
+  }
+
+  #calculateTotalAmount() {
+    return this.#purchaseList.reduce((total, item) => total + item.quantity, 0);
+  }
+  
 
   #calculateMembershipDiscount(membershipDiscount) {
     const calculatedDiscount = membershipDiscount * 0.3;
