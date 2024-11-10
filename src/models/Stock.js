@@ -1,11 +1,11 @@
-import fs from "fs";
-import ERROR_MESSAGES from "../constants/errorConstants.js";
+import fs from 'fs';
+import ERROR_MESSAGES from '../constants/errorConstants.js';
 
 class Stock {
   #productInfo;
 
   constructor() {
-    const fileData = fs.readFileSync("./public/products.md", "utf-8");
+    const fileData = fs.readFileSync('./public/products.md', 'utf-8');
     this.#productInfo = this.#parseFileData(fileData);
   }
 
@@ -32,16 +32,13 @@ class Stock {
     const outOfStockProducts = Object.keys(purchaseInfo).filter(
       (productName) => {
         const products = this.findProductsInStock(productName);
-
         let totalQuantityAvailable = products.reduce(
           (sum, product) => sum + product.quantity,
           0
         );
-
         return purchaseInfo[productName] > totalQuantityAvailable;
       }
     );
-
     if (outOfStockProducts.length > 0) {
       throw new Error(ERROR_MESSAGES.OUT_OF_STOCK_LIMIT);
     }
@@ -52,7 +49,10 @@ class Stock {
   }
 
   findProductSameNameAndPromotion(product) {
-    return this.#productInfo.find((item) => item.name === product.name && item.promotion === product.promotion);
+    return this.#productInfo.find(
+      (item) =>
+        item.name === product.name && item.promotion === product.promotion
+    );
   }
 
   subtrackStock(product, quantity) {
@@ -61,14 +61,17 @@ class Stock {
   }
 
   additionalSubtrackStock(productName, quantity) {
-    const productInStock = this.findProductSameNameAndPromotion({ name: productName, promotion: 'null' });
+    const productInStock = this.findProductSameNameAndPromotion({
+      name: productName,
+      promotion: 'null',
+    });
     productInStock.quantity -= quantity;
   }
 
   #parseFileData(fileData) {
-    const eachData = fileData.trim().split("\n");
-    const parseData = eachData.slice(1).map((data) => {
-      const [name, price, quantity, promotion] = data.split(",");
+    const eachData = fileData.trim().split('\n');
+    const parsedData = eachData.slice(1).map((data) => {
+      const [name, price, quantity, promotion] = data.split(',');
       return {
         name,
         price: Number(price),
@@ -76,7 +79,35 @@ class Stock {
         promotion,
       };
     });
-    return parseData;
+
+    const productInfo = [];
+    parsedData.forEach((product) =>
+      this.#processProduct(product, productInfo, parsedData)
+    );
+    return productInfo;
+  }
+
+  #processProduct(product, productInfo, parsedData) {
+    const { name, price, quantity, promotion } = product;
+
+    if (promotion !== 'null') {
+      productInfo.push({ name, price, quantity, promotion });
+      const existingNonPromoProduct = this.#checkNonPromoProductExistence(
+        name,
+        parsedData
+      );
+      if (!existingNonPromoProduct) {
+        productInfo.push({ name, price, quantity: 0, promotion: 'null' });
+      }
+    } else {
+      productInfo.push({ name, price, quantity, promotion: 'null' });
+    }
+  }
+
+  #checkNonPromoProductExistence(name, parsedData) {
+    return parsedData.find(
+      (item) => item.name === name && item.promotion === 'null'
+    );
   }
 }
 
