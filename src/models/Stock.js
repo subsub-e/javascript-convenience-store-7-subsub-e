@@ -29,19 +29,22 @@ class Stock {
   }
 
   checkOutOfStock(purchaseInfo) {
-    const outOfStockProducts = Object.keys(purchaseInfo).filter(
-      (productName) => {
-        const products = this.findProductsInStock(productName);
-        let totalQuantityAvailable = products.reduce(
-          (sum, product) => sum + product.quantity,
-          0
-        );
-        return purchaseInfo[productName] > totalQuantityAvailable;
-      }
-    );
+    const outOfStockProducts = this.#findOutOfStockProducts(purchaseInfo);
     if (outOfStockProducts.length > 0) {
       throw new Error(ERROR_MESSAGES.OUT_OF_STOCK_LIMIT);
     }
+  }
+
+  #findOutOfStockProducts(purchaseInfo) {
+    return Object.keys(purchaseInfo).filter((productName) => {
+      const totalQuantityAvailable = this.#calculateTotalQuantity(productName);
+      return purchaseInfo[productName] > totalQuantityAvailable;
+    });
+  }
+
+  #calculateTotalQuantity(productName) {
+    const products = this.findProductsInStock(productName);
+    return products.reduce((sum, product) => sum + product.quantity, 0);
   }
 
   findProductsInStock(name) {
@@ -69,8 +72,13 @@ class Stock {
   }
 
   #parseFileData(fileData) {
+    const parsedData = this.#parseRawData(fileData);
+    return this.#reinforceProductInfo(parsedData);
+  }
+
+  #parseRawData(fileData) {
     const eachData = fileData.trim().split('\n');
-    const parsedData = eachData.slice(1).map((data) => {
+    return eachData.slice(1).map((data) => {
       const [name, price, quantity, promotion] = data.split(',');
       return {
         name,
@@ -79,32 +87,59 @@ class Stock {
         promotion,
       };
     });
+  }
 
+  #reinforceProductInfo(parsedData) {
     const productInfo = [];
     parsedData.forEach((product) =>
-      this.#processProduct(product, productInfo, parsedData)
+      this.#addProduct(product, productInfo, parsedData)
     );
     return productInfo;
   }
 
-  #processProduct(product, productInfo, parsedData) {
-    const { name, price, quantity, promotion } = product;
+  #addProduct(product, productInfo, parsedData) {
+    this.#addPromotionProduct(product, productInfo);
+    this.#addNonPromotionProductIfMissing(product, productInfo, parsedData);
+    this.#addNonPromotionProduct(product, productInfo);
+  }
 
-    if (promotion !== 'null') {
-      productInfo.push({ name, price, quantity, promotion });
-      const existingNonPromoProduct = this.#checkNonPromoProductExistence(
-        name,
-        parsedData
-      );
-      if (!existingNonPromoProduct) {
-        productInfo.push({ name, price, quantity: 0, promotion: 'null' });
-      }
-    } else {
-      productInfo.push({ name, price, quantity, promotion: 'null' });
+  #addPromotionProduct(product, productInfo) {
+    if (product.promotion !== 'null') {
+      productInfo.push({
+        name: product.name,
+        price: product.price,
+        quantity: product.quantity,
+        promotion: product.promotion,
+      });
     }
   }
 
-  #checkNonPromoProductExistence(name, parsedData) {
+  #addNonPromotionProductIfMissing(product, productInfo, parsedData) {
+    if (
+      product.promotion !== 'null' &&
+      !this.#checkNonPromotionProductExistence(product.name, parsedData)
+    ) {
+      productInfo.push({
+        name: product.name,
+        price: product.price,
+        quantity: 0,
+        promotion: 'null',
+      });
+    }
+  }
+
+  #addNonPromotionProduct(product, productInfo) {
+    if (product.promotion === 'null') {
+      productInfo.push({
+        name: product.name,
+        price: product.price,
+        quantity: product.quantity,
+        promotion: 'null',
+      });
+    }
+  }
+
+  #checkNonPromotionProductExistence(name, parsedData) {
     return parsedData.find(
       (item) => item.name === name && item.promotion === 'null'
     );
