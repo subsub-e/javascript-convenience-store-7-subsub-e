@@ -14,13 +14,15 @@ class Receipt {
   }
 
   addPurchaseInfo(productName, quantity, totalPrice) {
-    this.#purchaseList.push({
-      name: productName,
-      quantity: quantity,
-      totalPrice: totalPrice,
-    });
-    this.#totalPurchasePrice += totalPrice;
-    this.#membershipDiscount += totalPrice;
+    if (quantity > 0) {
+      this.#purchaseList.push({
+        name: productName,
+        quantity: quantity,
+        totalPrice: totalPrice,
+      });
+      this.#totalPurchasePrice += totalPrice;
+      this.#membershipDiscount += totalPrice;
+    }
   }
 
   addPromotionInfo(
