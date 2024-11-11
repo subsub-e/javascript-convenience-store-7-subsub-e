@@ -66,7 +66,8 @@ JavaScript로 구현하고 Jest를 통해 테스트 하였으며, MVC패턴을 �
 - 추가 구매 여부를 확인하기 위해 안내 문구를 출력한다.<br/><br/>
 
 ## 📦 다이어그램
-![diagram](https://github.com/user-attachments/assets/ecc7cccb-fba9-4ac8-a286-9a90bd95ea84)
+
+![편의점다이어그램](https://github.com/user-attachments/assets/75303fe2-3d66-49df-84ad-da4e3067eb14)
 
 
 
