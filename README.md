@@ -69,7 +69,35 @@ JavaScript로 구현하고 Jest를 통해 테스트 하였으며, MVC패턴을 �
 
 ![편의점다이어그램](https://github.com/user-attachments/assets/75303fe2-3d66-49df-84ad-da4e3067eb14)
 
+## 📁 폴더구조
 
+```
+📦src
+ ┣ 📂constants
+ ┃ ┣ 📜convenienceStoreConstants.js
+ ┃ ┣ 📜errorConstants.js
+ ┃ ┣ 📜inputConstants.js
+ ┃ ┗ 📜outputConstants.js
+ ┣ 📂controllers
+ ┃ ┣ 📜MainController.js
+ ┃ ┗ 📜StoreController.js
+ ┣ 📂models
+ ┃ ┣ 📜Promotion.js
+ ┃ ┣ 📜Receipt.js
+ ┃ ┗ 📜Stock.js
+ ┣ 📂services
+ ┃ ┣ 📜InputService.js
+ ┃ ┗ 📜PaymentService.js
+ ┣ 📂utils
+ ┃ ┣ 📜formatting.js
+ ┃ ┗ 📜validation.js
+ ┣ 📂views
+ ┃ ┣ 📜InputView.js
+ ┃ ┗ 📜OutputView.js
+ ┣ 📜App.js
+ ┗ 📜index.js
+```
+ <br/><br/>
 
 ## ✅ 체크리스트
 
