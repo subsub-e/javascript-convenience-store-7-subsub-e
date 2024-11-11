@@ -8,26 +8,24 @@ class PaymentService {
   async start(purchaseInfo, stock, result) {
     const promotion = new Promotion();
     const promotionInfo = promotion.getPromotionInfo();
-
+    
     for (const productName of Object.keys(purchaseInfo)) {
-      const products = stock.findProductsInStock(productName);
-      const quantityNeeded = purchaseInfo[productName];
-      const promotionDetail = this.#getPromotionDetail(products, promotionInfo);
-
-      if (!promotionDetail) {
-        this.#purchase(products, quantityNeeded, stock, result);
-        stock.subtrackStock(products[0], quantityNeeded);
-      } else {
-        await this.#applyPromotion(
-          products,
-          promotionDetail,
-          quantityNeeded,
-          stock,
-          result
-        );
-      }
+      await this.#eachProductPurchase(productName, purchaseInfo, stock, promotionInfo, result);
     }
   }
+  
+  async #eachProductPurchase(productName, purchaseInfo, stock, promotionInfo, result) {
+    const products = stock.findProductsInStock(productName);
+    const quantityNeeded = purchaseInfo[productName];
+    const promotionDetail = this.#getPromotionDetail(products, promotionInfo);
+  
+    if (promotionDetail) {
+      await this.#applyPromotion(products, promotionDetail, quantityNeeded, stock, result);
+    } else {
+      this.#purchaseWithoutPromotion(products, quantityNeeded, stock, result);
+    }
+  }
+  
 
   #getPromotionDetail(products, promotionInfo) {
     const promotionalProduct = products.find(
@@ -40,183 +38,127 @@ class PaymentService {
     );
   }
 
-  async #applyPromotion(
-    products,
-    promotionDetail,
-    quantityNeeded,
-    stock,
-    result
-  ) {
-    const hasPromotionProductInfo = this.#hasPromotionProduct(products);
+  #purchaseWithoutPromotion(products, quantityNeeded, stock, result) {
+    this.#purchase(products, quantityNeeded, stock, result);
+    stock.subtrackStock(products[0], quantityNeeded);
+  }
 
-    if (
-      hasPromotionProductInfo.quantity >=
-        promotionDetail.buy + promotionDetail.get &&
-      hasPromotionProductInfo.quantity >= quantityNeeded
-    ) {
-      await this.#applyPromotionIfStockSufficient(
-        hasPromotionProductInfo,
-        promotionDetail,
-        quantityNeeded,
-        stock,
-        result
-      );
+  async #applyPromotion(products, promotionDetail, quantityNeeded, stock, result) {
+    const promoProductInfo = this.#findPromotionProduct(products);
+    const isStockSufficient = this.#isStockSufficient(promoProductInfo, promotionDetail,quantityNeeded);
+
+    if (isStockSufficient) {
+      await this.#applyFullPromotion(promoProductInfo, promotionDetail, quantityNeeded, stock, result);
     } else {
-      await this.#applyPromotionIfStockIsNotSufficient(
-        hasPromotionProductInfo,
-        promotionDetail,
-        quantityNeeded,
-        stock,
-        result
-      );
+      await this.#applyPartialPromotion(promoProductInfo, promotionDetail, quantityNeeded, stock, result);
     }
   }
 
-  async #applyPromotionIfStockIsNotSufficient(
-    hasPromotionProductInfo,
-    promotionDetail,
-    quantityNeeded,
-    stock,
-    result
-  ) {
-    const applyPromotionAmount =
-      hasPromotionProductInfo.quantity -
-      (hasPromotionProductInfo.quantity %
-        (promotionDetail.buy + promotionDetail.get));
-    const nonPromotionProductInfo = {
-      name: hasPromotionProductInfo.name,
-      quantity: quantityNeeded - applyPromotionAmount,
-    };
-    const answer = await this.inputService.askToPayNonPromotionItem(
-      nonPromotionProductInfo
+  #isStockSufficient(productInfo, promotionDetail, quantityNeeded) {
+    return (
+      productInfo.quantity >= promotionDetail.buy + promotionDetail.get &&
+      productInfo.quantity > quantityNeeded
     );
+  }
 
-    if (answer == 'Y') {
-      if (applyPromotionAmount > 0) {
-        this.#addPromotion(
-          hasPromotionProductInfo.name,
-          applyPromotionAmount / (promotionDetail.buy + promotionDetail.get),
-          quantityNeeded,
-          stock,
-          result
-        );
-      }
-      this.#purchase([hasPromotionProductInfo], quantityNeeded, stock, result);
-      stock.subtrackStock(
-        hasPromotionProductInfo,
-        hasPromotionProductInfo.quantity
-      );
-      stock.additionalSubtrackStock(
-        hasPromotionProductInfo.name,
-        quantityNeeded - hasPromotionProductInfo.quantity
-      );
-      return;
+  async #applyPartialPromotion(productInfo, promotionDetail, quantityNeeded, stock, result) {
+    const applyPromotionAmount = this.#calculateApplyPromotionAmount(productInfo, promotionDetail);
+    const answer = await this.inputService.askToPayNonPromotionItem({
+      name: productInfo.name,
+      quantity: quantityNeeded - applyPromotionAmount,
+    });
+
+    if (answer === 'Y') {
+      this.#processPartialPayment(productInfo, promotionDetail, quantityNeeded, applyPromotionAmount, stock, result);
     } else {
-      if (applyPromotionAmount > 0) {
-        this.#addPromotion(
-          hasPromotionProductInfo.name,
-          applyPromotionAmount / (promotionDetail.buy + promotionDetail.get),
-          applyPromotionAmount,
-          stock,
-          result
-        );
-        this.#purchase(
-          [hasPromotionProductInfo],
-          applyPromotionAmount,
-          stock,
-          result
-        );
-        stock.subtrackStock(hasPromotionProductInfo, applyPromotionAmount);
-      }
-
-      return;
+      this.#processPartialPromotionOnly(productInfo, promotionDetail, applyPromotionAmount, stock, result);
     }
   }
 
-  async #applyPromotionIfStockSufficient(
-    hasPromotionProductInfo,
-    promotionDetail,
-    quantity,
-    stock,
-    result
-  ) {
-    const promotionQuantity =
-      Math.floor(quantity / (promotionDetail.buy + promotionDetail.get)) *
-      promotionDetail.get;
+  #calculateApplyPromotionAmount(productInfo, promotionDetail) {
+    return (
+      productInfo.quantity -
+      (productInfo.quantity % (promotionDetail.buy + promotionDetail.get))
+    );
+  }
 
-    if (
-      this.#canUserReceiveAdditionalItems(
-        hasPromotionProductInfo,
-        promotionDetail,
-        quantity
-      )
-    ) {
-      const answer = await this.inputService.askToAddPromotionQuantity(
-        hasPromotionProductInfo.name
-      );
+  #processPartialPayment(productInfo, promotionDetail, quantityNeeded, applyPromotionAmount, stock, result) {
+    this.#addPromotion(
+      productInfo.name,
+      applyPromotionAmount / (promotionDetail.buy + promotionDetail.get),
+      quantityNeeded,
+      stock,
+      result
+    );
+    this.#purchase([productInfo], quantityNeeded, stock, result);
+    this.#subtrackStockAfterPurchase(stock, productInfo, quantityNeeded);
+  }
 
-      if (answer === 'Y') {
-        this.#addPromotion(
-          hasPromotionProductInfo.name,
-          promotionQuantity + promotionDetail.get,
-          quantity + promotionDetail.get,
-          stock,
-          result
-        );
-        this.#purchase(
-          [hasPromotionProductInfo],
-          quantity + promotionDetail.get,
-          stock,
-          result
-        );
-        stock.subtrackStock(
-          hasPromotionProductInfo,
-          quantity + promotionDetail.get
-        );
-        return;
-      } else {
-        if (promotionQuantity > 0) {
-          this.#addPromotion(
-            hasPromotionProductInfo.name,
-            promotionQuantity,
-            quantity,
-            stock,
-            result
-          );
-        }
-      }
+  #processPartialPromotionOnly(productInfo, promotionDetail, applyPromotionAmount, stock, result) {
+    this.#addPromotion(
+      productInfo.name,
+      applyPromotionAmount / (promotionDetail.buy + promotionDetail.get),
+      applyPromotionAmount,
+      stock,
+      result
+    );
+    this.#purchase([productInfo], applyPromotionAmount, stock, result);
+    stock.subtrackStock(productInfo, applyPromotionAmount);
+  }
+
+  async #applyFullPromotion(hasPromotionProductInfo, promotionDetail, quantity, stock, result) {
+    const promotionQuantity = this.#calculatePromotionQuantity(quantity, promotionDetail);
+    
+    if (this.#canUserReceiveAdditionalItems(hasPromotionProductInfo, promotionDetail, quantity)) {
+      await this.#handleAdditionalItems(hasPromotionProductInfo, promotionDetail, promotionQuantity, quantity, stock, result);
     } else {
-      this.#addPromotion(
-        hasPromotionProductInfo.name,
-        promotionQuantity,
-        quantity,
+      this.#purchasePromotionProduct(hasPromotionProductInfo, promotionQuantity, quantity, stock, result);
+    }
+  }
+  
+  #calculatePromotionQuantity(quantity, promotionDetail) {
+    return Math.floor(quantity / (promotionDetail.buy + promotionDetail.get)) * promotionDetail.get;
+  }
+  
+  async #handleAdditionalItems(hasPromotionProductInfo, promotionDetail, promotionQuantity, quantity, stock, result) {
+    const userWantsAdditionalItems = await this.#askUserForAdditionalItems(hasPromotionProductInfo);
+    if (userWantsAdditionalItems) {
+      this.#purchasePromotionProduct(hasPromotionProductInfo,
+        promotionQuantity + promotionDetail.get,
+        quantity + promotionDetail.get,
         stock,
         result
       );
+    } else {
+      this.#purchasePromotionProduct(hasPromotionProductInfo, promotionQuantity, quantity, stock, result);
     }
+  }
+  
 
-    this.#purchase([hasPromotionProductInfo], quantity, stock, result);
-    stock.subtrackStock(hasPromotionProductInfo, quantity);
+  #canUserReceiveAdditionalItems(hasPromotionProductInfo, promotionDetail, quantity) {
+    return (
+      quantity + promotionDetail.get <= hasPromotionProductInfo.quantity &&
+      quantity % (promotionDetail.buy + promotionDetail.get) === promotionDetail.buy
+    );
+  }
+  
+
+  async #askUserForAdditionalItems(hasPromotionProductInfo) {
+    const answer = await this.inputService.askToAddPromotionQuantity(
+      hasPromotionProductInfo.name
+    );
+    return answer === 'Y';
   }
 
-  #canUserReceiveAdditionalItems(
-    hasPromotionProductInfo,
-    promotionDetail,
-    quantity
-  ) {
-    if (quantity + promotionDetail.get > hasPromotionProductInfo.quantity) {
-      return false;
+  #purchasePromotionProduct(productInfo, promotionQty, quantity, stock, result) {
+    if (promotionQty > 0) {
+      this.#addPromotion(productInfo.name, promotionQty, quantity, stock, result);
     }
-    if (
-      quantity % (promotionDetail.buy + promotionDetail.get) ===
-      promotionDetail.buy
-    ) {
-      return true;
-    }
-    return false;
+    this.#purchase([productInfo], quantity, stock, result);
+    stock.subtrackStock(productInfo, quantity);
   }
 
-  #hasPromotionProduct(products) {
+  #findPromotionProduct(products) {
     return products.find((product) => product.promotion !== 'null');
   }
 
@@ -234,6 +176,14 @@ class PaymentService {
       quantity,
       stock.getProductTotalPrice(productsName, quantity),
       stock.getProductTotalPrice(productsName, totalQuantity)
+    );
+  }
+
+  #subtrackStockAfterPurchase(stock, productInfo, quantityNeeded) {
+    stock.subtrackStock(productInfo, productInfo.quantity);
+    stock.additionalSubtrackStock(
+      productInfo.name,
+      quantityNeeded - productInfo.quantity
     );
   }
 }
